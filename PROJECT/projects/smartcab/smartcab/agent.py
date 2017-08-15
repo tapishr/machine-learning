@@ -99,10 +99,11 @@ class LearningAgent(Agent):
         # When learning, check if the 'state' is not in the Q-table
         # If it is not, create a new dictionary for that state
         #   Then, for each action available, set the initial Q-value to 0.0
-        if state not in self.Q:
-            self.Q[state] = dict()
-            for ac in self.valid_actions:
-                self.Q[state][ac] = 0.0
+        if self.learning:
+            if state not in self.Q:
+                self.Q[state] = dict()
+                for ac in self.valid_actions:
+                    self.Q[state][ac] = 0.0
 
         return
 
@@ -130,10 +131,7 @@ class LearningAgent(Agent):
                 # Otherwise, choose an action with the highest Q-value for the current state
                 # Be sure that when choosing an action with highest Q-value that you randomly select between actions that "tie".
                 maxQ = self.get_maxQ(state)
-                tied_actions = list()
-                for k,v in self.Q[state].iteritems():
-                    if v == maxQ:
-                        tied_actions.append(k)
+                tied_actions = [action for action in self.valid_actions if self.Q[state][action] == self.get_maxQ(state)]
                 action = random.choice(tied_actions)
         return action
 

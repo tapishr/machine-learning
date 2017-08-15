@@ -1546,16 +1546,16 @@ RDTR/wIAwhQ1XaTbagAAAABJRU5ErkJggg==
 <div class="text_cell_render border-box-sizing rendered_html">
 <p><strong>Answer:</strong> Calculating the state space by multiplying the number of possible values for each feature -</p>
 <ul>
-<li>waypoint = 4</li>
+<li>waypoint = 3 ('left', 'right' and 'forward'. We will never see 'None'.)</li>
 <li>light = 2</li>
 <li>left = 4</li>
 <li>right = 4</li>
 <li>oncoming = 4</li>
 </ul>
-<p>Total states = 4 X 2 X 4 X 4 X 4 = 512
-Assuming that each time step will provide the agent with a new state, total timesteps needed will be 512.
-512 is a very reasonal number of timesteps. On my machine, I timed agent.py for 20 training trials and 10 test trials, a total of about (30 X 20, assuming an average number of 20 timesteps) 600 timesteps which completed in 55 seconds (with GUI enabled).</p>
-<p>And this is the worst-case scenario. Disabling the GUI will decrease the time and all states counted above are not going to be observable. Since dummy driving agents always follow traffic rules, we will never see a combination of feature values where a dummy agent is committing a traffic violation, for example, 'oncoming' = 'forward' when 'light' = 'red'.</p>
+<p>Total states = 3 X 2 X 4 X 4 X 4 = 384
+Assuming that each time step will provide the agent with a new state, total timesteps needed will be 384.
+384 is a very reasonal number of timesteps. On my machine, I timed agent.py for 20 training trials and 10 test trials, a total of about (30 X 20, assuming an average number of 20 timesteps) 600 timesteps which completed in 55 seconds (with GUI enabled).</p>
+<p>And this is the worst-case scenario. Disabling the GUI will decrease the time and all states counted above are not going to be observable.</p>
 
 </div>
 </div>
@@ -5514,22 +5514,22 @@ The optimal policy can be described in the following way -</p>
 
 <pre><code>- If the signal is red, stop. The only possible valid move is to go right when signal is red, but even then one should first look to the left to check for oncoming traffic as they have the right-of-way.
 - If signal is green -
-    -Forward : it is okay to go straight unless traffic from the left or right is coming straight.
-    -Right : It is okay to go right unless there is straight traffic from left.
-    -Left : It is okay to turn left unless their is no oncoming traffic going straight or turning left and no traffic from the left and right.
+    -Forward : it is always okay to go forward as left and right traffic would be behind red lights.
+    -Right : Same case as above. It will always be a valid move.
+    -Left : It is okay to turn left unless their is no oncoming traffic going straight or turning left (in the same lane as the agent).
     -Stop : It is not okay to stop at a green light as it may hold up traffic.
 -It is also necessary to go in the direction of the waypoint, if that does not cause traffic violation.
 </code></pre>
 <p>On investigating 'sim_improved-learning.txt', it can be seen that some state-action pairs have correct maximum Q values for actions according to the above policy whereas many do not.
 For example, the folllowing state -</p>
-<p><code>('left', 'green', None, 'right', 'right')
- -- forward : 0.00
- -- left : -14.87
- -- right : 1.06
- -- None : -4.75</code></p>
-<p>In the above state, the agent has to drive left, the light is green, there is no traffic coming from the left. Traffic coming from the right and forward is turning right. The agent should not go left in this case which is correctly identified by the large negative reward for left. The agent will also not stop at the green light as there is a negative reward for that too. The agent will choose to go right, according to the Q-values given which is correct since going forward or left will be a violation. Stopping will also be a violation.</p>
-<p>In the following state, the state-action pairs do not follow the optimal policy - 
- <code>('left', 'red', 'left', None, 'right')
+<p><code>('left', 'green', 'left', 'right', 'left')
+ -- forward : 0.67
+ -- left : 0.81
+ -- right : 0.53
+ -- None : 0.00</code></p>
+<p>In the above state, the agent has to drive left, the light is green and oncoming traffic is turning left (right with respect to smartcab). Traffic from left and right is behind red lights. The maximum Q-value is for the action to go left, which is the correct direction according to the optimal policy described above. The directions forward and right will be wrong as the agent may collide with oncoming traffic (and also, these directions will take the agent farther from the destination) and idling at the intersection would hold up traffic.</p>
+<p>In the following state, the state-action pairs do not follow the optimal policy -</p>
+<p><code>('left', 'red', 'left', None, 'right')
  -- forward : -4.76
  -- left : -39.61
  -- right : 0.89
@@ -5566,7 +5566,7 @@ For example, the folllowing state -</p>
 <div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p><strong>Answer:</strong> Presently, the project is set up in such a way that the smartcab has no information about the final destination. It only cares about the next waypoint and how to reach it. The 'RoutePlanner' class in planner.py computes the optimal route from the present position of the smartcab and presents it with a waypoint. If the smartcab was to evaluate future states and select the best possible reward from a future state, it has no knowledge about the value of waypoint in future states. For example, if the smartcab is at an intersection and it has to turn right, it has no way of knowing where it will have to turn after the present intersection. Hence, it is not capable of evaluating rewards from future states.</p>
-<p>Assuming that the smartcab could get information about the destination and the correct route to follow, it will then be able to take decisions based on future rewards. However, using discounted future rewards will bias the agent towards going for actions that maximize rewards by reaching the destination as soon as possible and committing traffic violations along the way. However, I do not understand why the Q-values would be affected if the agent is given many trials to learn, as observed above. It would be great if the reviewer can shed some light on this and share their thoughts.</p>
+<p>Assuming that the smartcab could get information about the destination and the correct route to follow, it will then be able to take decisions based on future rewards. However, the environment is set up in such a manner that for each trial, random destination and starting positions are selected. For each trial, going to the selected destination would mean getting higher reward, and the Q-values of the smartcab would change to reflect this fact. But after the trial is over, and a new random destination is selected, the smartcab would still assume that going to the previous destination would yield higher reward (compared to other intersections nearby) as the Q-values have been biased towards that intersection. This behavior would cause the smartcab to ignore the waypoint and not follow the optimal route.</p>
 
 </div>
 </div>
